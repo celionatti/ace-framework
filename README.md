@@ -56,25 +56,33 @@ mvc/
 ## 🛠️ Setup & Installation
 
 ### 1. Prerequisite Checklist
+
 * PHP 8.0 or higher
 * Composer installed
 * MySQL (e.g. XAMPP Control Panel running Apache & MySQL)
 
 ### 2. Clone/Extract the Project
+
 Ensure the project sits inside your web directory (e.g., `C:/xampp/htdocs/mvc`).
 
 ### 3. Install Dependencies (Autoloader Setup)
+
 Open a terminal in the project directory and run:
+
 ```bash
 composer dump-autoload
 ```
 
 ### 4. Configuration Setup
+
 Duplicate the `.env.example` file to `.env`:
+
 ```bash
 cp .env.example .env
 ```
+
 Open `.env` and fill in your database credentials:
+
 ```ini
 APP_ENV=development
 APP_NAME="Ace App"
@@ -86,14 +94,18 @@ DB_NAME=mvc_db
 DB_USER=root
 DB_PASS=
 ```
+
 *Note: The database does not need to exist. The framework will automatically detect if it is missing and attempt to create it (`mvc_db`) and its tables on the first page load.*
 
 ### 5. Running the Application
+
 * **Under XAMPP**: Access the framework directly at `http://localhost/mvc/` (url rewriting automatically routes requests to `public/index.php` using the root `.htaccess`).
 * **Via built-in PHP server**: Open your terminal in the project folder and run:
+
   ```bash
   php -S localhost:8000 -t public
   ```
+
   Then access `http://localhost:8000/`.
 
 ---
@@ -101,7 +113,9 @@ DB_PASS=
 ## 📖 Quick-Start Framework Guide
 
 ### 1. Registering Routes
+
 Routes are registered in `routes/web.php` pointing to Controller Actions or closures:
+
 ```php
 // Static GET route
 $router->get('/about', function() {
@@ -118,7 +132,9 @@ $router->get('/users/{id}', function($request, $id) {
 ```
 
 ### 2. Controller-Level Middlewares
+
 Protect specific actions by registering middlewares in your Controller's constructor:
+
 ```php
 namespace App\Controllers;
 
@@ -140,9 +156,11 @@ class UserDashboardController extends Controller
 ```
 
 ### 3. Fluent Query Builder & Active Record ORM
+
 Models map to database tables seamlessly, supporting both raw Active Record operations and clean, fluent queries.
 
 #### Fluent & Fail-safe Querying
+
 ```php
 // Fetch published posts ordered by date limit 10
 $posts = Post::query()
@@ -161,6 +179,7 @@ $emails = User::pluck('email');
 ```
 
 #### Save (INSERT / UPDATE) & Factory Creation
+
 ```php
 // Option A: Active Record instantiation & save
 $user = new User();
@@ -190,6 +209,7 @@ $user = User::updateOrCreate(
 ```
 
 #### Deletion
+
 ```php
 // Delete individual row instance
 $user = User::findOne(['id' => 2]);
@@ -202,6 +222,7 @@ User::destroy(3, 4, 5);
 ```
 
 ### 4. Template Views & Custom Directives
+
 Views support convenient Blade-like template directives:
 
 ```html
@@ -232,3 +253,7 @@ Views support convenient Blade-like template directives:
     @endsession
 @endsection
 ```
+
+Ace Core Framework
+Copyright © 2026 Celio Natti
+Released under the MIT License.

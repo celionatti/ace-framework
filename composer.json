@@ -1,7 +1,8 @@
 {
-    "name": "ace-core/framework",
+    "name": "ace-core/ace",
     "description": "A custom mini PHP MVC framework",
     "type": "library",
+    "license": "MIT",
     "require": {
         "php": ">=8.0",
         "phpmailer/phpmailer": "^7.1"
