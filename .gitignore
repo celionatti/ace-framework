@@ -1,0 +1,15 @@
+vendor/*
+app/*
+config/*
+migrations/*
+public/*
+routes/*
+scratch/*
+storage/*
+views/*
+.env
+.env.example
+.htaccess
+ace
+composer.lock
+GUIDE.md
