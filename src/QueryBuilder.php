@@ -4,6 +4,7 @@ namespace Ace;
 
 use PDO;
 use Exception;
+use Ace\Exceptions\ModelNotFoundException;
 
 class QueryBuilder
 {
@@ -118,6 +119,41 @@ class QueryBuilder
     }
 
     /**
+     * Get the first record matching the query or throw a ModelNotFoundException.
+     *
+     * @throws ModelNotFoundException
+     */
+    public function firstOrFail(): Model
+    {
+        $record = $this->first();
+
+        if (!$record) {
+            throw new ModelNotFoundException($this->modelClass);
+        }
+
+        return $record;
+    }
+
+    /**
+     * Find a record by primary key, or throw a ModelNotFoundException.
+     *
+     * @throws ModelNotFoundException
+     */
+    public function findOrFail(mixed $id): Model
+    {
+        $tempModel = new $this->modelClass();
+        $primaryKey = $tempModel->primaryKey();
+
+        $record = $this->where($primaryKey, $id)->first();
+
+        if (!$record) {
+            throw new ModelNotFoundException($this->modelClass, $id);
+        }
+
+        return $record;
+    }
+
+    /**
      * Get total count matching query criteria
      */
     public function count(): int
@@ -139,6 +175,8 @@ class QueryBuilder
         }
 
         $statement->execute();
-        return (int)$statement->fetchColumn();
+        $return = (int)$statement->fetchColumn();
+        return $return;
     }
 }
+

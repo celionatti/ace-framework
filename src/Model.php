@@ -2,6 +2,8 @@
 
 namespace Ace;
 
+use Ace\Exceptions\ModelNotFoundException;
+
 abstract class Model
 {
     public const RULE_REQUIRED = 'required';
@@ -360,6 +362,319 @@ abstract class Model
     public static function all(): array
     {
         return static::find();
+    }
+
+    // =========================================================================
+    // Find-or-Fail Methods
+    // =========================================================================
+
+    /**
+     * Find a record by primary key or throw ModelNotFoundException.
+     *
+     * @throws ModelNotFoundException
+     */
+    public static function findOrFail(mixed $id): static
+    {
+        $model = new static();
+        $pk = $model->primaryKey();
+        $record = static::findOne([$pk => $id]);
+
+        if (!$record) {
+            throw new ModelNotFoundException(static::class, $id);
+        }
+
+        return $record;
+    }
+
+    /**
+     * Find the first record matching conditions or throw ModelNotFoundException.
+     *
+     * @throws ModelNotFoundException
+     */
+    public static function firstOrFail(array $where): static
+    {
+        $record = static::findOne($where);
+
+        if (!$record) {
+            throw new ModelNotFoundException(static::class);
+        }
+
+        return $record;
+    }
+
+    // =========================================================================
+    // Convenient Finders
+    // =========================================================================
+
+    /**
+     * Find records where a single column matches a value.
+     *
+     *   User::findBy('email', 'john@example.com');
+     */
+    public static function findBy(string $column, mixed $value): array
+    {
+        return static::find([$column => $value]);
+    }
+
+    /**
+     * Check if any record exists matching the given conditions.
+     *
+     *   if (User::exists(['email' => $email])) { ... }
+     */
+    public static function exists(array $where): bool
+    {
+        return static::count($where) > 0;
+    }
+
+    /**
+     * Get the latest records, ordered by a column (default: primary key).
+     *
+     *   Post::latest();               // ORDER BY id DESC
+     *   Post::latest('created_at');    // ORDER BY created_at DESC
+     */
+    public static function latest(string $column = null, int $limit = null): array
+    {
+        $model = new static();
+        $col = $column ?? $model->primaryKey();
+        $options = ['orderBy' => "`$col` DESC"];
+        if ($limit !== null) {
+            $options['limit'] = $limit;
+        }
+        return static::find([], $options);
+    }
+
+    /**
+     * Get the oldest records, ordered by a column ascending.
+     *
+     *   Post::oldest('created_at');
+     */
+    public static function oldest(string $column = null, int $limit = null): array
+    {
+        $model = new static();
+        $col = $column ?? $model->primaryKey();
+        $options = ['orderBy' => "`$col` ASC"];
+        if ($limit !== null) {
+            $options['limit'] = $limit;
+        }
+        return static::find([], $options);
+    }
+
+    /**
+     * Pluck a single column's values from matching records.
+     *
+     *   $emails = User::pluck('email');                      // ['a@b.com', 'c@d.com']
+     *   $map    = User::pluck('email', 'id');                // [1 => 'a@b.com', 2 => 'c@d.com']
+     */
+    public static function pluck(string $column, string $keyColumn = null, array $where = []): array
+    {
+        $records = static::find($where);
+        $result = [];
+
+        foreach ($records as $record) {
+            if ($keyColumn !== null) {
+                $result[$record->{$keyColumn}] = $record->{$column};
+            } else {
+                $result[] = $record->{$column};
+            }
+        }
+
+        return $result;
+    }
+
+    // =========================================================================
+    // Static Factory Methods
+    // =========================================================================
+
+    /**
+     * Create a new record and persist it immediately.
+     *
+     *   $user = User::create(['name' => 'John', 'email' => 'john@example.com']);
+     */
+    public static function create(array $data): static
+    {
+        $model = new static();
+        $model->loadData($data);
+        $model->save();
+        return $model;
+    }
+
+    /**
+     * Find the first record matching attributes, or create it.
+     *
+     *   $user = User::firstOrCreate(
+     *       ['email' => 'john@example.com'],       // search by
+     *       ['name' => 'John Doe']                  // extra data for creation
+     *   );
+     */
+    public static function firstOrCreate(array $where, array $extra = []): static
+    {
+        $existing = static::findOne($where);
+
+        if ($existing) {
+            return $existing;
+        }
+
+        return static::create(array_merge($where, $extra));
+    }
+
+    /**
+     * Find and update or create if not found.
+     *
+     *   $user = User::updateOrCreate(
+     *       ['email' => 'john@example.com'],       // search by
+     *       ['name' => 'John Doe', 'role' => 'admin']  // data to update/set
+     *   );
+     */
+    public static function updateOrCreate(array $where, array $data): static
+    {
+        $existing = static::findOne($where);
+
+        if ($existing) {
+            $existing->fill($data);
+            $existing->save();
+            return $existing;
+        }
+
+        return static::create(array_merge($where, $data));
+    }
+
+    /**
+     * Delete record(s) by primary key.
+     *
+     *   User::destroy(1);
+     *   User::destroy(1, 2, 3);
+     *   User::destroy([1, 2, 3]);
+     */
+    public static function destroy(mixed ...$ids): int
+    {
+        $ids = is_array($ids[0] ?? null) ? $ids[0] : $ids;
+        $deleted = 0;
+
+        foreach ($ids as $id) {
+            try {
+                $model = static::findOrFail($id);
+                if ($model->delete()) {
+                    $deleted++;
+                }
+            } catch (ModelNotFoundException) {
+                // Skip missing records
+            }
+        }
+
+        return $deleted;
+    }
+
+    // =========================================================================
+    // Instance Helpers
+    // =========================================================================
+
+    /**
+     * Mass-assign attributes (without saving).
+     *
+     *   $user->fill(['name' => 'Jane', 'email' => 'jane@example.com']);
+     */
+    public function fill(array $data): static
+    {
+        foreach ($data as $key => $value) {
+            $this->{$key} = $value;
+        }
+        return $this;
+    }
+
+    /**
+     * Mass-assign attributes and save immediately.
+     *
+     *   $user->update(['name' => 'Updated Name']);
+     */
+    public function update(array $data): bool
+    {
+        $this->fill($data);
+        return $this->save();
+    }
+
+    /**
+     * Reload the model's attributes from the database.
+     *
+     *   $user->fresh();  // Re-fetches from DB
+     */
+    public function fresh(): ?static
+    {
+        $pk = $this->primaryKey();
+        $pkValue = $this->{$pk} ?? null;
+
+        if (empty($pkValue)) {
+            return null;
+        }
+
+        return static::findOne([$pk => $pkValue]);
+    }
+
+    /**
+     * Reload this instance in-place from the database.
+     *
+     *   $user->refresh();  // Same instance, updated attributes
+     */
+    public function refresh(): static
+    {
+        $fresh = $this->fresh();
+
+        if ($fresh) {
+            $this->attributes = $fresh->attributes;
+        }
+
+        return $this;
+    }
+
+    /**
+     * Convert the model's attributes to a plain array.
+     *
+     *   $array = $user->toArray();
+     */
+    public function toArray(): array
+    {
+        return $this->attributes;
+    }
+
+    /**
+     * Convert the model's attributes to a JSON string.
+     *
+     *   echo $user->toJson();
+     */
+    public function toJson(int $options = 0): string
+    {
+        return json_encode($this->toArray(), $options);
+    }
+
+    /**
+     * Check if the model has been persisted (has a primary key value).
+     *
+     *   if ($user->isPersisted()) { ... }
+     */
+    public function isPersisted(): bool
+    {
+        $pk = $this->primaryKey();
+        return !empty($this->{$pk});
+    }
+
+    /**
+     * Duplicate the model instance (without the primary key).
+     *
+     *   $clone = $user->replicate();
+     *   $clone->email = 'new@email.com';
+     *   $clone->save();
+     */
+    public function replicate(): static
+    {
+        $clone = new static();
+        $pk = $this->primaryKey();
+
+        foreach ($this->attributes as $key => $value) {
+            if ($key !== $pk) {
+                $clone->{$key} = $value;
+            }
+        }
+
+        return $clone;
     }
 
     /**

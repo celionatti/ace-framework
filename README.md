@@ -140,9 +140,9 @@ class UserDashboardController extends Controller
 ```
 
 ### 3. Fluent Query Builder & Active Record ORM
-Models map to database tables seamlessly and support clean, fluent queries.
+Models map to database tables seamlessly, supporting both raw Active Record operations and clean, fluent queries.
 
-#### Fluent Querying
+#### Fluent & Fail-safe Querying
 ```php
 // Fetch published posts ordered by date limit 10
 $posts = Post::query()
@@ -151,12 +151,18 @@ $posts = Post::query()
     ->limit(10)
     ->get();
 
-// Find single user
-$user = User::query()->where('email', 'user@example.com')->first();
+// Find single user or throw ModelNotFoundException (generates 404 response automatically)
+$user = User::findOrFail(2);
+$user = User::query()->where('email', 'user@example.com')->firstOrFail();
+
+// Check existence & pluck specific columns
+$exists = User::exists(['email' => 'admin@example.com']);
+$emails = User::pluck('email');
 ```
 
-#### Save (INSERT / UPDATE)
+#### Save (INSERT / UPDATE) & Factory Creation
 ```php
+// Option A: Active Record instantiation & save
 $user = new User();
 $user->name = 'Jane Doe';
 $user->email = 'jane@example.com';
@@ -169,14 +175,30 @@ if ($user->validate()) {
 } else {
     print_r($user->errors);
 }
+
+// Option B: Inline creation (instantiates, populates, and saves)
+$user = User::create([
+    'name' => 'Jane Doe',
+    'email' => 'jane@example.com'
+]);
+
+// Option C: Update-or-Create
+$user = User::updateOrCreate(
+    ['email' => 'jane@example.com'],
+    ['name' => 'Jane Doe Jr.']
+);
 ```
 
-#### Delete Row
+#### Deletion
 ```php
-$user = User::findOne(['id' => 1]);
+// Delete individual row instance
+$user = User::findOne(['id' => 2]);
 if ($user) {
-    $user->delete(); // Deletes record
+    $user->delete();
 }
+
+// Statically delete multiple records by primary key
+User::destroy(3, 4, 5);
 ```
 
 ### 4. Template Views & Custom Directives
