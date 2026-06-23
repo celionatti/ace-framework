@@ -1,5 +1,5 @@
 {
-    "name": "ace/framework",
+    "name": "ace-core/framework",
     "description": "A custom mini PHP MVC framework",
     "type": "library",
     "require": {
