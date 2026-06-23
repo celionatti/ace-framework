@@ -1,7 +1,7 @@
 {
     "name": "ace/framework",
     "description": "A custom mini PHP MVC framework",
-    "type": "project",
+    "type": "library",
     "require": {
         "php": ">=8.0",
         "phpmailer/phpmailer": "^7.1"
