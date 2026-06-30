@@ -130,6 +130,41 @@ class Request
     }
 
     /**
+     * Get a specific input parameter by key (sanitized)
+     */
+    public function get(string $key, mixed $default = null): mixed
+    {
+        $body = $this->getBody();
+        return $body[$key] ?? $default;
+    }
+
+    /**
+     * Check if the current request path matches a pattern (supports wildcards e.g. 'admin/*')
+     */
+    public function is(string $pattern): bool
+    {
+        $path = trim($this->getPath(), '/');
+        $pattern = trim($pattern, '/');
+
+        // Convert '*' to regex wildcard match
+        $regex = str_replace('*', '.*', $pattern);
+        $regex = "@^" . $regex . "$@i";
+
+        return (bool)preg_match($regex, $path);
+    }
+
+    /**
+     * Get the full absolute request URL
+     */
+    public function getFullUrl(): string
+    {
+        $scheme = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $uri = $_SERVER['REQUEST_URI'] ?? '/';
+        return $scheme . '://' . $host . $uri;
+    }
+
+    /**
      * Recursively sanitize values to prevent XSS
      */
     private function sanitize($value)
