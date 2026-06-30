@@ -9,6 +9,7 @@ A handcrafted, lightweight, zero-dependency custom PHP MVC framework. The core e
 * **Strict MVC Separation**: Clean structures for Controllers, Models, and Views.
 * **Core Framework Decoupling**: Core framework classes reside in `src/` under the `Ace\` namespace, making it packagist-ready. User applications reside in `app/` under the `App\` namespace.
 * **Zero-Config Active Record ORM & Fluent Query Builder**: Exposes static query methods (`findOne()`, `find()`, `all()`, `delete()`) and simple instance persistence (`save()`). Includes a fluent query builder interface for clean DB interactions.
+* **API Resources & JSON Serialization**: Transform database entities and collections into customized, wrapped JSON representations (`Ace\JsonResource`) for APIs, keeping sensitive schema details hidden.
 * **Built-in Guard System (Input & Output Protection)**: Automates XSS input sanitization recursively before saving attributes to the DB (excluding `$rawFields`), enforces mass-assignment protection using `$fillable` and `$guarded`, and provides safe HTML output helpers (`$model->safe()` and `e()`).
 * **Smart Request & Response Wrappers**: Automates XSS input sanitization on incoming parameters and provides unified JSON and redirection responses.
 * **Local Subdirectory Routing**: Base paths are auto-detected and stripped dynamically from the request URI so routes work interchangeably on XAMPP and in production.
@@ -253,7 +254,45 @@ if ($user) {
 User::destroy(3, 4, 5);
 ```
 
-### 5. Template Views & Custom Directives
+### 5. API Resources & JSON Serialization
+
+API Resources (`Ace\JsonResource`) act as a transform mapping layer between models and API endpoints:
+
+```php
+namespace App\Resources;
+
+use Ace\JsonResource;
+use Ace\Request;
+
+class UserResource extends JsonResource
+{
+    public function toArray(Request $request): array
+    {
+        return [
+            'id' => (int) $this->resource->id,
+            'name' => $this->resource->name,
+            'email' => $this->resource->email,
+            'joined' => date('Y-m-d', strtotime($this->resource->created_at))
+        ];
+    }
+}
+```
+
+Return them directly from controller actions or closures to serve formatted JSON responses automatically:
+
+```php
+// Single resource
+$router->get('/api/users/{id}', function(Request $request, $id) {
+    return new UserResource(User::findOrFail($id));
+});
+
+// Collection of resources
+$router->get('/api/users', function(Request $request) {
+    return UserResource::collectionResponse(User::all());
+});
+```
+
+### 6. Template Views & Custom Directives
 
 Views support convenient Blade-like template directives:
 

@@ -13,6 +13,16 @@ class Response
     }
 
     /**
+     * Set HTTP response header
+     */
+    public function setHeader(string $name, string $value): void
+    {
+        if (!headers_sent()) {
+            header("$name: $value");
+        }
+    }
+
+    /**
      * Redirect to another URL, auto-detecting base subdirectories for local environment
      */
     public function redirect(string $url): void

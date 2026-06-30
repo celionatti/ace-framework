@@ -87,11 +87,23 @@ class Router
             }
 
             // Call action
-            return call_user_func_array([$controller, $action], array_merge([$this->request], $params));
+            $result = call_user_func_array([$controller, $action], array_merge([$this->request], $params));
+
+            if ($result instanceof JsonResource) {
+                return $result->toResponse($this->request);
+            }
+
+            return $result;
         }
 
         if (is_callable($callback)) {
-            return call_user_func_array($callback, array_merge([$this->request], $params));
+            $result = call_user_func_array($callback, array_merge([$this->request], $params));
+
+            if ($result instanceof JsonResource) {
+                return $result->toResponse($this->request);
+            }
+
+            return $result;
         }
 
         throw new Exception("Route callback is not valid", 500);
