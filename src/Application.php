@@ -18,12 +18,16 @@ class Application
     public ?Database $db = null;
     public ?Model $user = null;
     public array $config = [];
+    public Container $container;
 
     public function __construct(string $rootDir, array $config = [])
     {
         self::$ROOT_DIR = $rootDir;
         self::$app = $this;
         $this->config = $config;
+
+        // Initialize the Dependency Injection Container
+        $this->container = new Container();
 
         // Load env variables
         $this->loadEnv($rootDir . '/.env');
@@ -47,6 +51,9 @@ class Application
         if (!empty($dbConfig['database'])) {
             $this->db = new Database($dbConfig);
         }
+
+        // Register core singletons in the container
+        $this->registerCoreSingletons();
 
         // Error handling registration
         $this->registerErrorHandlers();
@@ -370,6 +377,23 @@ class Application
         setcookie('remember_me', '', time() - 3600, '/');
         if (isset($_COOKIE['remember_me'])) {
             unset($_COOKIE['remember_me']);
+        }
+    }
+
+    /**
+     * Bind core components to the Dependency Injection Container.
+     */
+    private function registerCoreSingletons(): void
+    {
+        $this->container->singleton(Application::class, fn() => $this);
+        $this->container->singleton(Request::class, fn() => $this->request);
+        $this->container->singleton(Response::class, fn() => $this->response);
+        $this->container->singleton(Session::class, fn() => $this->session);
+        $this->container->singleton(View::class, fn() => $this->view);
+        $this->container->singleton(Router::class, fn() => $this->router);
+        
+        if ($this->db) {
+            $this->container->singleton(Database::class, fn() => $this->db);
         }
     }
 }

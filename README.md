@@ -12,6 +12,7 @@ A handcrafted, lightweight, zero-dependency custom PHP MVC framework. The core e
 * **Smart Request & Response Wrappers**: Automates XSS input sanitization and provides unified JSON and redirection responses.
 * **Local Subdirectory Routing**: Base paths are auto-detected and stripped dynamically from the request URI so routes work interchangeably on XAMPP and in production.
 * **Controller Middlewares**: Apply route guard filters (e.g. restricting profile dashboards to authenticated sessions via `AuthMiddleware` or auth pages via `GuestMiddleware`).
+* **Dependency Injection Container**: Reflection-based constructor auto-wiring. Type-hint any class in your controller constructors and the framework resolves and injects dependencies automatically — including core singletons like `Request`, `Database`, and `Session`.
 * **Secure Template Directives**: Automated XSS escaping, safe URL output with `@url()` to protect links while maintaining query strings, and convenience directives: `@csrf`, `@isset`, `@empty`, and `@session`.
 * **Paystack, Stripe, and Flutterwave Integration**: Multi-gateway payment clients integrated using native PHP cURL (zero SDK dependencies) to initialize payments, verify transactions, and validate signed webhook signatures.
 * **Self-Healing Schema Migrations**: Runs automatically on application boot or via the Ace CLI to build/verify database structures.
@@ -41,6 +42,7 @@ mvc/
 │   ├── Router.php          # Registers and matches static/dynamic routes
 │   ├── Controller.php      # Base controller for views and middlewares
 │   ├── Model.php           # Active Record base model & Validator
+│   ├── Container.php      # Dependency Injection Container with auto-wiring
 │   ├── QueryBuilder.php    # Fluent query builder interface
 │   ├── Database.php        # PDO wrapper & self-healing migrations
 │   ├── Session.php         # Session values & temporary flash alerts
@@ -155,7 +157,36 @@ class UserDashboardController extends Controller
 }
 ```
 
-### 3. Fluent Query Builder & Active Record ORM
+### 3. Dependency Injection (Constructor Auto-wiring)
+
+The framework's DI Container automatically resolves constructor dependencies when instantiating controllers. Simply type-hint what you need:
+
+```php
+namespace App\Controllers;
+
+use Ace\Controller;
+use Ace\Request;
+use Ace\Database;
+use App\Services\NotificationService;
+
+class OrderController extends Controller
+{
+    public function __construct(
+        protected Database $db,
+        protected NotificationService $notifications
+    ) {
+        $this->registerMiddleware(new AuthMiddleware());
+    }
+
+    public function show(Request $request, $id)
+    {
+        // $this->db and $this->notifications are already injected!
+        return $this->render('orders/show', ['order' => Order::findOrFail($id)]);
+    }
+}
+```
+
+### 4. Fluent Query Builder & Active Record ORM
 
 Models map to database tables seamlessly, supporting both raw Active Record operations and clean, fluent queries.
 
@@ -221,7 +252,7 @@ if ($user) {
 User::destroy(3, 4, 5);
 ```
 
-### 4. Template Views & Custom Directives
+### 5. Template Views & Custom Directives
 
 Views support convenient Blade-like template directives:
 

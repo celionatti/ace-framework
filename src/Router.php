@@ -76,8 +76,8 @@ class Router
             $controllerClass = $callback[0];
             $action = $callback[1];
 
-            // Instantiation
-            $controller = new $controllerClass();
+            // Instantiation via Container
+            $controller = Application::$app->container->resolve($controllerClass);
             Application::$app->controller = $controller;
             $controller->action = $action;
 
