@@ -64,10 +64,48 @@ if (!function_exists('redirect')) {
 if (!function_exists('route')) {
     /**
      * Generate relative URL path for route linking.
+     *
+     * @param string $name Route name (e.g. 'events.id' or 'login') or direct path
+     * @param array|string|int $params Route parameters or query parameters
+     * @return string
      */
-    function route(string $path): string
+    function route(string $name, array|string|int $params = []): string
     {
-        $basePath = rtrim(dirname($_SERVER['SCRIPT_NAME']), '/\\');
+        $router = Application::$app->router;
+        $resolvedPath = $router->resolveRouteName($name);
+
+        if ($resolvedPath !== null) {
+            $path = $resolvedPath;
+        } else {
+            // Fallback for direct paths
+            $path = $name;
+        }
+
+        // Normalize scalar parameter to array if there's a dynamic parameter
+        if (!is_array($params)) {
+            preg_match_all('/\{([a-zA-Z0-9_]+)\}/', $path, $matches);
+            if (!empty($matches[1])) {
+                $params = [$matches[1][0] => $params];
+            } else {
+                $params = [];
+            }
+        }
+
+        $queryParams = [];
+        foreach ($params as $key => $val) {
+            $placeholder = '{' . $key . '}';
+            if (str_contains($path, $placeholder)) {
+                $path = str_replace($placeholder, (string)$val, $path);
+            } else {
+                $queryParams[$key] = $val;
+            }
+        }
+
+        if (!empty($queryParams)) {
+            $path .= (str_contains($path, '?') ? '&' : '?') . http_build_query($queryParams);
+        }
+
+        $basePath = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? ''), '/\\');
         return $basePath . '/' . ltrim($path, '/');
     }
 }

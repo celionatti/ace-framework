@@ -7,6 +7,7 @@ use Exception;
 class Router
 {
     protected array $routes = [];
+    protected array $namedRoutes = [];
     public Request $request;
     public Response $response;
 
@@ -19,17 +20,62 @@ class Router
     /**
      * Register GET route
      */
-    public function get(string $path, $callback): void
+    public function get(string $path, $callback): Route
     {
         $this->routes['get'][$path] = $callback;
+        return new Route($this, 'get', $path, $callback);
     }
 
     /**
      * Register POST route
      */
-    public function post(string $path, $callback): void
+    public function post(string $path, $callback): Route
     {
         $this->routes['post'][$path] = $callback;
+        return new Route($this, 'post', $path, $callback);
+    }
+
+    /**
+     * Register an explicit name for a route path.
+     */
+    public function registerName(string $name, string $path): void
+    {
+        $this->namedRoutes[$name] = $path;
+    }
+
+    /**
+     * Get the route path associated with an explicit name.
+     */
+    public function getPathByName(string $name): ?string
+    {
+        return $this->namedRoutes[$name] ?? null;
+    }
+
+    /**
+     * Resolve a route name (explicit or auto-named dot-notation) to its path pattern.
+     */
+    public function resolveRouteName(string $name): ?string
+    {
+        // 1. Check explicit named routes
+        if (isset($this->namedRoutes[$name])) {
+            return $this->namedRoutes[$name];
+        }
+
+        // 2. Check auto-naming convention in registered routes
+        foreach ($this->routes as $method => $routes) {
+            foreach ($routes as $path => $callback) {
+                // Convert /blog/{id} -> blog.id
+                $autoName = str_replace(['{', '}'], '', $path);
+                $autoName = trim($autoName, '/');
+                $autoName = str_replace('/', '.', $autoName);
+
+                if ($autoName === $name) {
+                    return $path;
+                }
+            }
+        }
+
+        return null;
     }
 
     /**
