@@ -300,13 +300,16 @@ Views support convenient Blade-like template directives:
 @extends('layouts/main')
 
 @section('content')
+    <!-- Reference CSS/JS assets safely using asset() helper -->
+    <link rel="stylesheet" href="<?= asset('css/style.css') ?>">
+    
     <h1>Welcome, {{ $user->name }}</h1>
 
     <!-- Hidden CSRF token field -->
     @csrf
 
-    <!-- Keep image query strings intact and block javascript: URLs -->
-    <img src="@url($user->avatar_url)">
+    <!-- Render user uploads safely using upload() helper -->
+    <img src="<?= upload($user->avatar_url) ?>" class="avatar">
 
     @isset($posts)
         @empty($posts)

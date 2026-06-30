@@ -163,5 +163,42 @@ if (!function_exists('e')) {
     }
 }
 
+if (!function_exists('asset')) {
+    /**
+     * Generate URL for a static asset located in public/assets.
+     *
+     *   <link rel="stylesheet" href="<?= asset('css/style.css') ?>">
+     */
+    function asset(string $path): string
+    {
+        return route('assets/' . ltrim($path, '/'));
+    }
+}
+
+if (!function_exists('upload')) {
+    /**
+     * Generate URL for a user upload file located in public/uploads.
+     *
+     *   <img src="<?= upload('avatars/user.png') ?>">
+     */
+    function upload(string $path): string
+    {
+        return route('uploads/' . ltrim($path, '/'));
+    }
+}
+
+if (!function_exists('public_path')) {
+    /**
+     * Generate URL for any file located in the public directory root.
+     *
+     *   <link rel="shortcut icon" href="<?= public_path('favicon.ico') ?>">
+     */
+    function public_path(string $path = ''): string
+    {
+        return route($path);
+    }
+}
+
+
 
 
