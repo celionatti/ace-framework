@@ -12,6 +12,13 @@ abstract class Model
     public const RULE_MAX = 'max';
     public const RULE_MATCH = 'match';
     public const RULE_UNIQUE = 'unique';
+    public const RULE_EXISTS = 'exists';
+    public const RULE_DATE = 'date';
+    public const RULE_NUMERIC = 'numeric';
+    public const RULE_IN = 'in';
+    public const RULE_BOOLEAN = 'boolean';
+    public const RULE_URL = 'url';
+    public const RULE_CONFIRMED = 'confirmed';
 
     protected array $attributes = [];
     public array $errors = [];
@@ -162,6 +169,14 @@ abstract class Model
                                 'table' => $parts[0],
                                 'column' => $parts[1] ?? $attribute
                             ];
+                        } elseif ($ruleName === self::RULE_EXISTS) {
+                            $parts = explode(',', $paramStr);
+                            $ruleData = [
+                                'table' => $parts[0],
+                                'column' => $parts[1] ?? 'id'
+                            ];
+                        } elseif ($ruleName === self::RULE_IN) {
+                            $ruleData = ['values' => explode(',', $paramStr)];
                         }
                     }
                 } elseif (is_array($rule)) {
@@ -217,6 +232,60 @@ abstract class Model
                         }
                     }
                 }
+
+                if ($ruleName === self::RULE_EXISTS && !empty($value)) {
+                    $existsTable = $ruleData['table'] ?? null;
+                    $existsColumn = $ruleData['column'] ?? 'id';
+                    $db = Application::$app->db;
+
+                    if ($db && $existsTable) {
+                        $stmt = $db->prepare("SELECT 1 FROM `$existsTable` WHERE `$existsColumn` = :val LIMIT 1");
+                        $stmt->execute([':val' => $value]);
+                        if (!$stmt->fetch()) {
+                            $this->addErrorForRule($attribute, self::RULE_EXISTS, [
+                                'table' => $existsTable,
+                                'column' => $existsColumn
+                            ]);
+                        }
+                    }
+                }
+
+                if ($ruleName === self::RULE_DATE && !empty($value)) {
+                    if (strtotime($value) === false) {
+                        $this->addErrorForRule($attribute, self::RULE_DATE);
+                    }
+                }
+
+                if ($ruleName === self::RULE_NUMERIC && !empty($value) && !is_numeric($value)) {
+                    $this->addErrorForRule($attribute, self::RULE_NUMERIC);
+                }
+
+                if ($ruleName === self::RULE_IN && !empty($value)) {
+                    $allowed = $ruleData['values'] ?? [];
+                    if (!in_array($value, $allowed, true)) {
+                        $this->addErrorForRule($attribute, self::RULE_IN, [
+                            'values' => implode(', ', $allowed)
+                        ]);
+                    }
+                }
+
+                if ($ruleName === self::RULE_BOOLEAN) {
+                    $acceptable = [true, false, 0, 1, '0', '1', 'true', 'false'];
+                    if (!in_array($value, $acceptable, true)) {
+                        $this->addErrorForRule($attribute, self::RULE_BOOLEAN);
+                    }
+                }
+
+                if ($ruleName === self::RULE_URL && !empty($value) && !filter_var($value, FILTER_VALIDATE_URL)) {
+                    $this->addErrorForRule($attribute, self::RULE_URL);
+                }
+
+                if ($ruleName === self::RULE_CONFIRMED) {
+                    $confirmValue = $this->{$attribute . '_confirmation'} ?? $this->{$attribute . 'Confirm'} ?? null;
+                    if ($value !== $confirmValue) {
+                        $this->addErrorForRule($attribute, self::RULE_CONFIRMED);
+                    }
+                }
             }
         }
 
@@ -259,6 +328,13 @@ abstract class Model
             self::RULE_MAX => 'Max length of this field must be {max}',
             self::RULE_MATCH => 'This field must be the same as {matchLabel}',
             self::RULE_UNIQUE => 'Record with this {field} already exists',
+            self::RULE_EXISTS => 'The selected {column} does not exist in {table}',
+            self::RULE_DATE => 'This field must be a valid date',
+            self::RULE_NUMERIC => 'This field must be a number',
+            self::RULE_IN => 'This field must be one of: {values}',
+            self::RULE_BOOLEAN => 'This field must be true or false',
+            self::RULE_URL => 'This field must be a valid URL',
+            self::RULE_CONFIRMED => 'The confirmation does not match',
         ];
     }
 
