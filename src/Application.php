@@ -132,6 +132,11 @@ class Application
      */
     public function handleException(\Throwable $exception): void
     {
+        // Clear all active output buffers to ensure a clean error page response
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+
         $code = (int)$exception->getCode();
         
         // Log the exception
@@ -173,11 +178,9 @@ class Application
         exit;
     }
 
-    /**
-     * Run the Application
-     */
     public function run(): void
     {
+        ob_start();
         try {
             // Run global middlewares
             (new \App\Middlewares\SecurityHeadersMiddleware())->execute('');
@@ -185,7 +188,8 @@ class Application
             (new \App\Middlewares\CsrfMiddleware())->execute('');
 
             echo $this->router->resolve();
-        } catch (Exception $e) {
+            ob_end_flush();
+        } catch (\Throwable $e) {
             $this->handleException($e);
         }
     }
