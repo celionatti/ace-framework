@@ -9,7 +9,8 @@ A handcrafted, lightweight, zero-dependency custom PHP MVC framework. The core e
 * **Strict MVC Separation**: Clean structures for Controllers, Models, and Views.
 * **Core Framework Decoupling**: Core framework classes reside in `src/` under the `Ace\` namespace, making it packagist-ready. User applications reside in `app/` under the `App\` namespace.
 * **Zero-Config Active Record ORM & Fluent Query Builder**: Exposes static query methods (`findOne()`, `find()`, `all()`, `delete()`) and simple instance persistence (`save()`). Includes a fluent query builder interface for clean DB interactions.
-* **Smart Request & Response Wrappers**: Automates XSS input sanitization and provides unified JSON and redirection responses.
+* **Built-in Guard System (Input & Output Protection)**: Automates XSS input sanitization recursively before saving attributes to the DB (excluding `$rawFields`), enforces mass-assignment protection using `$fillable` and `$guarded`, and provides safe HTML output helpers (`$model->safe()` and `e()`).
+* **Smart Request & Response Wrappers**: Automates XSS input sanitization on incoming parameters and provides unified JSON and redirection responses.
 * **Local Subdirectory Routing**: Base paths are auto-detected and stripped dynamically from the request URI so routes work interchangeably on XAMPP and in production.
 * **Controller Middlewares**: Apply route guard filters (e.g. restricting profile dashboards to authenticated sessions via `AuthMiddleware` or auth pages via `GuestMiddleware`).
 * **Dependency Injection Container**: Reflection-based constructor auto-wiring. Type-hint any class in your controller constructors and the framework resolves and injects dependencies automatically — including core singletons like `Request`, `Database`, and `Session`.

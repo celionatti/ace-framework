@@ -16,6 +16,35 @@ abstract class Model
     protected array $attributes = [];
     public array $errors = [];
 
+    // =========================================================================
+    // Guard Configuration — Override in child models
+    // =========================================================================
+
+    /**
+     * Fields that ARE allowed for mass assignment.
+     * If non-empty, only these fields pass through loadData/fill/create.
+     * Leave empty to allow all fields (except $guarded).
+     */
+    protected array $fillable = [];
+
+    /**
+     * Fields that are NEVER mass-assignable.
+     * Always blocked from loadData/fill/create even if $fillable is empty.
+     */
+    protected array $guarded = [];
+
+    /**
+     * Fields that skip input sanitization on save.
+     * Use for rich-text / HTML editor columns (e.g. 'body', 'bio_html').
+     */
+    protected array $rawFields = [];
+
+    /**
+     * Whether the input guard is enabled (auto-sanitize on save).
+     * Set to false in a model to disable automatic sanitization.
+     */
+    protected bool $inputGuarded = true;
+
     /**
      * Start a new fluent query builder instance for the model
      */
@@ -56,11 +85,43 @@ abstract class Model
         unset($this->attributes[$name]);
     }
 
+    // =========================================================================
+    // Output Guard — Safe / Raw Access
+    // =========================================================================
+
     /**
-     * Populate model attributes with raw request/db array data
+     * Get an attribute value escaped for safe HTML output.
+     *
+     *   <p><?= $user->safe('name') ?></p>
+     */
+    public function safe(string $key): string
+    {
+        return Guard::output($this->attributes[$key] ?? null);
+    }
+
+    /**
+     * Get an attribute value with NO escaping (raw database value).
+     * Use only when you explicitly trust the content (e.g. rendering rich HTML).
+     *
+     *   <div><?= $post->raw('body') ?></div>
+     */
+    public function raw(string $key): mixed
+    {
+        return $this->attributes[$key] ?? null;
+    }
+
+    // =========================================================================
+    // Data Loading with Mass Assignment Guard
+    // =========================================================================
+
+    /**
+     * Populate model attributes from request/array data.
+     * Applies mass-assignment guard ($fillable / $guarded).
      */
     public function loadData(array $data): void
     {
+        $data = Guard::filterMassAssignment($data, $this->fillable, $this->guarded);
+
         foreach ($data as $key => $value) {
             $this->{$key} = $value;
         }
@@ -228,6 +289,11 @@ abstract class Model
             if (isset($this->attributes[$column])) {
                 $saveData[$column] = $this->attributes[$column];
             }
+        }
+
+        // Input Guard: sanitize values before storage
+        if ($this->inputGuarded) {
+            $saveData = Guard::sanitizeAttributes($saveData, $this->rawFields);
         }
 
         $pkValue = $this->{$primaryKey} ?? null;
@@ -575,6 +641,8 @@ abstract class Model
      */
     public function fill(array $data): static
     {
+        $data = Guard::filterMassAssignment($data, $this->fillable, $this->guarded);
+
         foreach ($data as $key => $value) {
             $this->{$key} = $value;
         }

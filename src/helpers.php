@@ -139,4 +139,29 @@ if (!function_exists('xss_clean')) {
     }
 }
 
+if (!function_exists('guard')) {
+    /**
+     * Sanitize a value for safe database storage (Input Guard).
+     *
+     *   $clean = guard($userInput);
+     */
+    function guard(mixed $value): mixed
+    {
+        return \Ace\Guard::input($value);
+    }
+}
+
+if (!function_exists('e')) {
+    /**
+     * Escape a value for safe HTML output (Output Guard).
+     *
+     *   <p><?= e($name) ?></p>
+     */
+    function e(mixed $value): string
+    {
+        return \Ace\Guard::output($value);
+    }
+}
+
+
 
