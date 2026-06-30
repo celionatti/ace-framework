@@ -51,9 +51,6 @@ class Router
         return $this->namedRoutes[$name] ?? null;
     }
 
-    /**
-     * Resolve a route name (explicit or auto-named dot-notation) to its path pattern.
-     */
     public function resolveRouteName(string $name): ?string
     {
         // 1. Check explicit named routes
@@ -64,12 +61,22 @@ class Router
         // 2. Check auto-naming convention in registered routes
         foreach ($this->routes as $method => $routes) {
             foreach ($routes as $path => $callback) {
-                // Convert /blog/{id} -> blog.id
-                $autoName = str_replace(['{', '}'], '', $path);
-                $autoName = trim($autoName, '/');
-                $autoName = str_replace('/', '.', $autoName);
+                // Convention A: with parameter name (e.g. /blog/{id} -> blog.id)
+                $autoNameWithParam = str_replace(['{', '}'], '', $path);
+                $autoNameWithParam = trim($autoNameWithParam, '/');
+                $autoNameWithParam = str_replace('/', '.', $autoNameWithParam);
 
-                if ($autoName === $name) {
+                if ($autoNameWithParam === $name) {
+                    return $path;
+                }
+
+                // Convention B: without parameter name (e.g. /blog/{id} -> blog)
+                $cleanPath = preg_replace('/\{[a-zA-Z0-9_]+\}/', '', $path);
+                $cleanPath = preg_replace('/\/+/', '/', $cleanPath);
+                $autoNameWithoutParam = trim($cleanPath, '/');
+                $autoNameWithoutParam = str_replace('/', '.', $autoNameWithoutParam);
+
+                if ($autoNameWithoutParam === $name) {
                     return $path;
                 }
             }
