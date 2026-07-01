@@ -18,7 +18,7 @@ class Request
         }
 
         // Auto-detect and strip subdirectory path (e.g. /mvc/public/)
-        $scriptName = $_SERVER['SCRIPT_NAME']; // e.g., /mvc/public/index.php
+        $scriptName = $_SERVER['SCRIPT_NAME'] ?? ''; // e.g., /mvc/public/index.php
         $baseDir = dirname($scriptName);       // e.g., /mvc/public
         
         // Normalize backslashes to forward slashes just in case
@@ -28,6 +28,11 @@ class Request
             if (strpos($path, $baseDir) === 0) {
                 $path = substr($path, strlen($baseDir));
             }
+        }
+
+        // Strip index.php if present at the start of the path
+        if (str_starts_with($path, '/index.php')) {
+            $path = (string)substr($path, 10);
         }
 
         // Ensure path starts with a slash
