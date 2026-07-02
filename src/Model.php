@@ -319,6 +319,48 @@ abstract class Model
         return $this->errors[$attribute][0] ?? '';
     }
 
+    /**
+     * Get all validation errors grouped by attribute.
+     *
+     * @return array
+     */
+    public function getErrors(): array
+    {
+        return $this->errors;
+    }
+
+    /**
+     * Get only the first validation error for each attribute.
+     *
+     * @return array An associative array of [attribute => firstError]
+     */
+    public function getFirstErrors(): array
+    {
+        $firstErrors = [];
+        foreach ($this->errors as $attribute => $messages) {
+            if (!empty($messages)) {
+                $firstErrors[$attribute] = $messages[0];
+            }
+        }
+        return $firstErrors;
+    }
+
+    /**
+     * Get a flat list of all validation error messages.
+     *
+     * @return array A flat indexed array of all error message strings
+     */
+    public function getErrorMessages(): array
+    {
+        $messages = [];
+        foreach ($this->errors as $attributeErrors) {
+            foreach ($attributeErrors as $message) {
+                $messages[] = $message;
+            }
+        }
+        return $messages;
+    }
+
     private function errorMessages(): array
     {
         return [
