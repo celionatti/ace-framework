@@ -29,11 +29,11 @@ class Session
     /**
      * Set a flash message
      */
-    public function setFlash(string $key, string $message): void
+    public function setFlash(string $key, mixed $value): void
     {
         $_SESSION[self::FLASH_KEY][$key] = [
             'remove' => false,
-            'value' => $message
+            'value' => $value
         ];
     }
 

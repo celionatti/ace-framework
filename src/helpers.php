@@ -53,11 +53,11 @@ if (!function_exists('view')) {
 
 if (!function_exists('redirect')) {
     /**
-     * Redirect to a given URL path.
+     * Redirect to a given URL path with optional status code and session flash data.
      */
-    function redirect(string $url): void
+    function redirect(string $url, int $statusCode = 302, array $flashData = []): void
     {
-        Application::$app->response->redirect($url);
+        Application::$app->response->redirect($url, $statusCode, $flashData);
     }
 }
 

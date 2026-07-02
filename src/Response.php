@@ -25,8 +25,19 @@ class Response
     /**
      * Redirect to another URL, auto-detecting base subdirectories for local environment
      */
-    public function redirect(string $url): void
+    public function redirect(string $url, int $statusCode = 302, array $flashData = []): void
     {
+        $this->setStatusCode($statusCode);
+
+        if (!empty($flashData)) {
+            $session = Application::$app->session;
+            if ($session) {
+                foreach ($flashData as $key => $value) {
+                    $session->setFlash($key, $value);
+                }
+            }
+        }
+
         // If it's an absolute URL, redirect directly
         if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
             header('Location: ' . $url);
@@ -35,7 +46,7 @@ class Response
 
         // Prepend base folder for local subdirectory installations (e.g. /mvc/public)
         if (str_starts_with($url, '/')) {
-            $scriptName = $_SERVER['SCRIPT_NAME'];
+            $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
             $baseDir = dirname($scriptName);
             $baseDir = str_replace('\\', '/', $baseDir);
             
