@@ -435,6 +435,34 @@ if (!function_exists('_ace_dd_format')) {
     }
 }
 
+if (!function_exists('back')) {
+    /**
+     * Redirect back to the previous page (HTTP Referer) or a fallback URL.
+     *
+     * @param string $fallback Fallback URL path if Referer is missing or external
+     * @param int $statusCode HTTP status code (default 302)
+     * @param array $flashData Session flash messages to carry over
+     */
+    function back(string $fallback = '/', int $statusCode = 302, array $flashData = []): void
+    {
+        $referer = $_SERVER['HTTP_REFERER'] ?? $fallback;
+        
+        // Prevent open redirect vulnerabilities: Ensure referrer is internal
+        $appUrl = env('APP_URL', '');
+        if (!empty($appUrl)) {
+            $host = parse_url($appUrl, PHP_URL_HOST);
+            $refererHost = parse_url($referer, PHP_URL_HOST);
+            
+            // If the referer points to an external host, fallback to safe internal route
+            if ($refererHost && $refererHost !== $host) {
+                $referer = $fallback;
+            }
+        }
+        
+        redirect($referer, $statusCode, $flashData);
+    }
+}
+
 
 
 

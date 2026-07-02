@@ -351,6 +351,16 @@ class View
         );
         $content = str_replace('@endsession', '<?php endif; ?>', $content);
 
+        // 9f. Compiling Error tags for Model validation feedback
+        $content = preg_replace_callback(
+            '/@error\(\s*(["\'])(.*?)\1\s*\)/s',
+            function ($matches) {
+                return "<?php if(isset(\$model) && \$model->hasError('{$matches[2]}')): \$message = \$model->getFirstError('{$matches[2]}'); ?>";
+            },
+            $content
+        );
+        $content = str_replace('@enderror', '<?php endif; ?>', $content);
+
         // 10. Compiling Includes (balanced parens regex to support nested expressions in params)
         $content = preg_replace_callback(
             '/@include\(\s*(["\'])(.*?)\1\s*(?:,\s*((?:[^()]*|\((?:[^()]*|\([^()]*\))*\))*))?\s*\)/s',
