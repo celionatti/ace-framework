@@ -62,8 +62,8 @@ class Mail
             $mail->AltBody = strip_tags($body);
 
             return $mail->send();
-        } catch (Exception $e) {
-            Logger::error("Message could not be sent. Mailer Error: {$mail->ErrorInfo}");
+        } catch (\Throwable $e) {
+            Logger::error("Message could not be sent. Error: {$e->getMessage()}");
             return false;
         }
     }
