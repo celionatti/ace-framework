@@ -463,6 +463,61 @@ if (!function_exists('back')) {
     }
 }
 
+if (!function_exists('flash_input')) {
+    /**
+     * Flash current request input data to the session.
+     *
+     * @param array|null $data The input data to flash (defaults to current request body)
+     */
+    function flash_input(?array $data = null): void
+    {
+        $request = Application::$app->request;
+        $session = Application::$app->session;
+        if ($request && $session) {
+            $data = $data ?? $request->getBody();
+            // Exclude sensitive fields from flashing
+            $sensitiveFields = ['password', 'passwordConfirm', 'csrf_token'];
+            foreach ($sensitiveFields as $field) {
+                unset($data[$field]);
+            }
+            $session->setFlash('_old_input', $data);
+        }
+    }
+}
+
+if (!function_exists('old')) {
+    /**
+     * Retrieve the previous input value for a form field.
+     * Checks both session-flashed old input and current request body.
+     *
+     * @param string $key The input field name
+     * @param mixed $default Default value if field is missing
+     * @return mixed
+     */
+    function old(string $key, mixed $default = null): mixed
+    {
+        // 1. Check session flashed old input
+        $session = Application::$app->session;
+        if ($session) {
+            $oldInput = $session->getFlash('_old_input');
+            if (is_array($oldInput) && isset($oldInput[$key])) {
+                return $oldInput[$key];
+            }
+        }
+
+        // 2. Check current request body input (in case of direct render on validation failure)
+        $request = Application::$app->request;
+        if ($request) {
+            $body = $request->getBody();
+            if (is_array($body) && isset($body[$key])) {
+                return $body[$key];
+            }
+        }
+
+        return $default;
+    }
+}
+
 
 
 
