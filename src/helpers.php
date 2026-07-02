@@ -237,6 +237,204 @@ if (!function_exists('public_path')) {
     }
 }
 
+if (!function_exists('dd')) {
+    /**
+     * Dump and Die helper for debugging.
+     */
+    function dd(mixed ...$vars): void
+    {
+        // Get caller details
+        $backtrace = debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 1);
+        $caller = $backtrace[0] ?? [];
+        $file = $caller['file'] ?? 'Unknown';
+        $line = $caller['line'] ?? 0;
+
+        // Clean up file path
+        $file = str_replace('\\', '/', $file);
+        if (defined('ROOT_DIR')) {
+            $file = str_replace(str_replace('\\', '/', ROOT_DIR) . '/', '', $file);
+        }
+
+        $isCli = php_sapi_name() === 'cli';
+        $isDev = (($_ENV['APP_ENV'] ?? 'development') === 'development');
+
+        if ($isCli) {
+            echo "\n\033[1;33m⚡ Ace Debug Dump (dd) at {$file}:{$line}\033[0m\n";
+            foreach ($vars as $var) {
+                var_dump($var);
+                echo "\n";
+            }
+            exit(1);
+        }
+
+        // Clear output buffers to ensure pristine debug output
+        while (ob_get_level() > 0) {
+            ob_end_clean();
+        }
+
+        // Set response headers
+        if (!headers_sent()) {
+            header('HTTP/1.1 500 Internal Server Error');
+            header('Content-Type: text/html; charset=utf-8');
+        }
+
+        echo '<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Ace DD Dump</title>
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #e2e8f0;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+            padding: 30px;
+            margin: 0;
+            line-height: 1.6;
+        }
+        .dd-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #1e293b;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+            border: 1px solid #334155;
+            overflow: hidden;
+        }
+        .dd-header {
+            background-color: #0f172a;
+            padding: 16px 24px;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .dd-title {
+            color: #38bdf8;
+            font-weight: bold;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .dd-caller {
+            color: #94a3b8;
+            font-size: 13px;
+            background-color: #1e293b;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid #334155;
+        }
+        .dd-body {
+            padding: 24px;
+            overflow-x: auto;
+        }
+        .dd-dump {
+            margin: 0;
+            font-size: 14px;
+        }
+        .dd-item {
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid #334155;
+        }
+        .dd-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+        .prod-warning {
+            background-color: #7f1d1d;
+            color: #fca5a5;
+            padding: 10px 20px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 13px;
+            border-bottom: 1px solid #991b1b;
+        }
+    </style>
+</head>
+<body>';
+
+        if (!$isDev) {
+            echo '<div class="prod-warning">⚠️ WARNING: Running debug dump in production mode! Please remove all dd() calls from your codebase.</div>';
+        }
+
+        echo '
+    <div class="dd-container">
+        <div class="dd-header">
+            <span class="dd-title">⚡ Ace Debug Dump</span>
+            <span class="dd-caller">' . htmlspecialchars($file) . ':' . $line . '</span>
+        </div>
+        <div class="dd-body">';
+
+        foreach ($vars as $var) {
+            echo '<div class="dd-item"><pre class="dd-dump">';
+            echo _ace_dd_format($var);
+            echo '</pre></div>';
+        }
+
+        echo '  </div>
+    </div>
+</body>
+</html>';
+        exit(1);
+    }
+}
+
+if (!function_exists('_ace_dd_format')) {
+    /**
+     * Internal formatting function for beautiful variable dumps.
+     */
+    function _ace_dd_format(mixed $var, int $depth = 0): string
+    {
+        $indent = str_repeat('    ', $depth);
+        if ($var === null) {
+            return '<span style="color: #64748b; font-weight: bold;">null</span>';
+        }
+        if (is_bool($var)) {
+            $val = $var ? 'true' : 'false';
+            return '<span style="color: #f97316; font-weight: bold;">' . $val . '</span>';
+        }
+        if (is_int($var) || is_float($var)) {
+            return '<span style="color: #38bdf8;">' . $var . '</span>';
+        }
+        if (is_string($var)) {
+            return '<span style="color: #10b981;">"' . htmlspecialchars($var) . '"</span> <span style="color: #64748b; font-size: 12px;">(length=' . strlen($var) . ')</span>';
+        }
+        if (is_array($var)) {
+            if (empty($var)) {
+                return '<span style="color: #cbd5e1;">[]</span>';
+            }
+            $count = count($var);
+            $output = '<span style="color: #cbd5e1; font-weight: bold;">array:' . $count . '</span> [' . "\n";
+            foreach ($var as $key => $val) {
+                $formattedKey = is_int($key) ? '<span style="color: #f43f5e;">' . $key . '</span>' : '<span style="color: #e2e8f0;">"' . htmlspecialchars($key) . '"</span>';
+                $output .= $indent . '    ' . $formattedKey . ' => ' . _ace_dd_format($val, $depth + 1) . ",\n";
+            }
+            $output .= $indent . ']';
+            return $output;
+        }
+        if (is_object($var)) {
+            $className = get_class($var);
+            $properties = (array) $var;
+            $output = '<span style="color: #a855f7; font-weight: bold;">object(' . $className . ')</span>' . ' {' . "\n";
+            foreach ($properties as $key => $val) {
+                $key = str_replace("\0*\0", 'protected:', $key);
+                $key = str_replace("\0" . $className . "\0", 'private:', $key);
+                $formattedKey = '<span style="color: #c084fc;">' . htmlspecialchars($key) . '</span>';
+                $output .= $indent . '    ' . $formattedKey . ' => ' . _ace_dd_format($val, $depth + 1) . ",\n";
+            }
+            $output .= $indent . '}';
+            return $output;
+        }
+        if (is_resource($var)) {
+            return '<span style="color: #eab308; font-weight: bold;">resource</span> (' . get_resource_type($var) . ')';
+        }
+        return htmlspecialchars(print_r($var, true));
+    }
+}
+
 
 
 
