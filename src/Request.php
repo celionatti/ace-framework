@@ -10,7 +10,7 @@ class Request
     public function getPath(): string
     {
         $path = $_SERVER['REQUEST_URI'] ?? '/';
-        
+
         // Remove query parameters
         $position = strpos($path, '?');
         if ($position !== false) {
@@ -20,10 +20,10 @@ class Request
         // Auto-detect and strip subdirectory path (e.g. /mvc/public/)
         $scriptName = $_SERVER['SCRIPT_NAME'] ?? ''; // e.g., /mvc/public/index.php
         $baseDir = dirname($scriptName);       // e.g., /mvc/public
-        
+
         // Normalize backslashes to forward slashes just in case
         $baseDir = str_replace('\\', '/', $baseDir);
-        
+
         if ($baseDir !== '/' && !empty($baseDir)) {
             if (strpos($path, $baseDir) === 0) {
                 $path = substr($path, strlen($baseDir));
@@ -32,7 +32,7 @@ class Request
 
         // Strip index.php if present at the start of the path
         if (str_starts_with($path, '/index.php')) {
-            $path = (string)substr($path, 10);
+            $path = (string) substr($path, 10);
         }
 
         // Ensure path starts with a slash
@@ -72,13 +72,13 @@ class Request
     public function getBody(): array
     {
         $body = [];
-        
+
         if ($this->isGet()) {
             foreach ($_GET as $key => $value) {
                 $body[$key] = $this->sanitize($value);
             }
         }
-        
+
         if ($this->isPost()) {
             // Check if request is JSON
             $contentType = $_SERVER["CONTENT_TYPE"] ?? '';
@@ -106,13 +106,13 @@ class Request
     public function getRawBody(): array
     {
         $body = [];
-        
+
         if ($this->isGet()) {
             foreach ($_GET as $key => $value) {
                 $body[$key] = $value;
             }
         }
-        
+
         if ($this->isPost()) {
             // Check if request is JSON
             $contentType = $_SERVER["CONTENT_TYPE"] ?? '';
@@ -146,16 +146,45 @@ class Request
     /**
      * Check if the current request path matches a pattern (supports wildcards e.g. 'admin/*')
      */
-    public function is(string $pattern): bool
+    // public function is(string $pattern): bool
+    // {
+    //     $path = trim($this->getPath(), '/');
+    //     $pattern = trim($pattern, '/');
+
+    //     // Convert '*' to regex wildcard match
+    //     $regex = str_replace('*', '.*', $pattern);
+    //     $regex = "@^" . $regex . "$@i";
+
+    //     return (bool)preg_match($regex, $path);
+    // }
+
+    public function is(string|array ...$patterns): bool
     {
         $path = trim($this->getPath(), '/');
-        $pattern = trim($pattern, '/');
 
-        // Convert '*' to regex wildcard match
-        $regex = str_replace('*', '.*', $pattern);
-        $regex = "@^" . $regex . "$@i";
+        $patterns = array_merge(
+            ...array_map(
+                fn($pattern) => is_array($pattern) ? $pattern : [$pattern],
+                $patterns
+            )
+        );
 
-        return (bool)preg_match($regex, $path);
+        foreach ($patterns as $pattern) {
+            if (!is_string($pattern)) {
+                continue;
+            }
+            
+            $pattern = trim($pattern, '/');
+
+            $regex = preg_quote($pattern, '@');
+            $regex = str_replace('\*', '.*', $regex);
+
+            if (preg_match("@^{$regex}$@i", $path)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
