@@ -70,10 +70,10 @@ Middlewares intercept incoming requests before reaching controller actions. They
 ```php
 namespace App\Controllers;
 
-use App\Core\Controller;
-use App\Core\Request;
-use App\Middlewares\AuthMiddleware;
-use App\Middlewares\CsrfMiddleware;
+use Ace\Controller;
+use Ace\Request;
+use Ace\Middlewares\AuthMiddleware;
+use Ace\Middlewares\CsrfMiddleware;
 use App\Middlewares\RoleMiddleware;
 
 class AdminController extends Controller
@@ -96,13 +96,13 @@ class AdminController extends Controller
 
 ## 💾 3. Models & Database (Active Record)
 
-Models inherit from `App\Core\Model` and act as Active Records.
+Models inherit from `Ace\Model` and act as Active Records.
 
 ### Defining a Model
 ```php
 namespace App\Models;
 
-use App\Core\Model;
+use Ace\Model;
 
 class Product extends Model
 {

@@ -183,9 +183,9 @@ class Application
         ob_start();
         try {
             // Run global middlewares
-            (new \App\Middlewares\SecurityHeadersMiddleware())->execute('');
-            (new \App\Middlewares\RateLimitMiddleware())->execute('');
-            (new \App\Middlewares\CsrfMiddleware())->execute('');
+            (new \Ace\Middlewares\SecurityHeadersMiddleware())->execute('');
+            (new \Ace\Middlewares\RateLimitMiddleware())->execute('');
+            (new \Ace\Middlewares\CsrfMiddleware())->execute('');
 
             echo $this->router->resolve();
             ob_end_flush();

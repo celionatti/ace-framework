@@ -2,15 +2,13 @@
 
 namespace Ace;
 
-use App\Middlewares\BaseMiddleware;
-
 class Controller
 {
     public string $layout = 'main';
     public string $action = '';
     
     /**
-     * @var BaseMiddleware[]
+     * @var Middleware[]
      */
     protected array $middlewares = [];
 
@@ -33,7 +31,7 @@ class Controller
     /**
      * Register route middleware on the controller
      */
-    public function registerMiddleware(BaseMiddleware $middleware): void
+    public function registerMiddleware(Middleware $middleware): void
     {
         $this->middlewares[] = $middleware;
     }
@@ -41,7 +39,7 @@ class Controller
     /**
      * Get all registered middlewares for this controller
      * 
-     * @return BaseMiddleware[]
+     * @return Middleware[]
      */
     public function getMiddlewares(): array
     {

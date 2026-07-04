@@ -352,10 +352,15 @@ class View
         $content = str_replace('@endsession', '<?php endif; ?>', $content);
 
         // 9f. Compiling Error tags for Model validation feedback
+        // Scans all template variables for any \Ace\Model instance with the given field error
         $content = preg_replace_callback(
             '/@error\(\s*(["\'])(.*?)\1\s*\)/s',
             function ($matches) {
-                return "<?php if(isset(\$model) && \$model->hasError('{$matches[2]}')): \$message = \$model->getFirstError('{$matches[2]}'); ?>";
+                $field = $matches[2];
+                return "<?php \$_ace_err = null; "
+                     . "foreach (get_defined_vars() as \$_v) { "
+                     . "if (\$_v instanceof \\Ace\\Model && \$_v->hasError('{$field}')) { \$_ace_err = \$_v; break; } } "
+                     . "if (\$_ace_err): \$message = \$_ace_err->getFirstError('{$field}'); ?>";
             },
             $content
         );

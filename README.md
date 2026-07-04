@@ -143,7 +143,7 @@ Protect specific actions by registering middlewares in your Controller's constru
 namespace App\Controllers;
 
 use Ace\Controller;
-use App\Middlewares\AuthMiddleware;
+use Ace\Middlewares\AuthMiddleware;
 
 class UserDashboardController extends Controller 
 {
@@ -170,6 +170,7 @@ use Ace\Controller;
 use Ace\Request;
 use Ace\Database;
 use App\Services\NotificationService;
+use Ace\Middlewares\AuthMiddleware;
 
 class OrderController extends Controller
 {
