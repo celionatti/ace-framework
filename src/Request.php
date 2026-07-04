@@ -201,7 +201,7 @@ class Request
     /**
      * Recursively sanitize values to prevent XSS
      */
-    private function sanitize($value)
+    private function sanitize(mixed $value): mixed
     {
         return XssSanitizer::clean($value);
     }
