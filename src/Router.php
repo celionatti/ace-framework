@@ -62,7 +62,7 @@ class Router
         foreach ($this->routes as $method => $routes) {
             foreach ($routes as $path => $callback) {
                 // Convention A: with parameter name (e.g. /blog/{id} -> blog.id)
-                $autoNameWithParam = str_replace(['{', '}'], '', $path);
+                $autoNameWithParam = str_replace(['{', '}', '?'], '', $path);
                 $autoNameWithParam = trim($autoNameWithParam, '/');
                 $autoNameWithParam = str_replace('/', '.', $autoNameWithParam);
 
@@ -71,7 +71,7 @@ class Router
                 }
 
                 // Convention B: without parameter name (e.g. /blog/{id} -> blog)
-                $cleanPath = preg_replace('/\{[a-zA-Z0-9_]+\}/', '', $path);
+                $cleanPath = preg_replace('/\{[a-zA-Z0-9_]+\??\}/', '', $path);
                 $cleanPath = preg_replace('/\/+/', '/', $cleanPath);
                 $autoNameWithoutParam = trim($cleanPath, '/');
                 $autoNameWithoutParam = str_replace('/', '.', $autoNameWithoutParam);
@@ -97,14 +97,18 @@ class Router
         $callback = $this->routes[$method][$path] ?? false;
 
         if ($callback === false) {
-            // Check dynamic parameter matches (e.g. /users/{id})
+            // Check dynamic parameter matches (e.g. /users/{id} or /users/{id?})
             foreach ($this->routes[$method] ?? [] as $route => $routeCallback) {
-                // Convert path like '/users/{id}' to regex pattern
-                $pattern = preg_replace('/\{([a-zA-Z0-9_]+)\}/', '([^/]+)', $route);
+                // Convert optional params {param?} to optional regex group
+                $pattern = preg_replace('#/\{([a-zA-Z0-9_]+)\?\}#', '(?:/([^/]+))?', $route);
+                // Convert required params {param} to required regex group
+                $pattern = preg_replace('/\{([a-zA-Z0-9_]+)\}/', '([^/]+)', $pattern);
                 $pattern = "@^" . $pattern . "$@";
 
                 if (preg_match($pattern, $path, $matches)) {
                     array_shift($matches); // Remove the full match
+                    // Replace empty optional matches with null
+                    $matches = array_map(fn($m) => $m === '' ? null : $m, $matches);
                     return $this->executeCallback($routeCallback, $matches);
                 }
             }

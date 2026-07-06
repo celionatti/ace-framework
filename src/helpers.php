@@ -83,7 +83,7 @@ if (!function_exists('route')) {
 
         // Normalize scalar parameter to array if there's a dynamic parameter
         if (!is_array($params)) {
-            preg_match_all('/\{([a-zA-Z0-9_]+)\}/', $path, $matches);
+            preg_match_all('/\{([a-zA-Z0-9_]+)\??\}/', $path, $matches);
             if (!empty($matches[1])) {
                 $params = [$matches[1][0] => $params];
             } else {
@@ -93,13 +93,21 @@ if (!function_exists('route')) {
 
         $queryParams = [];
         foreach ($params as $key => $val) {
-            $placeholder = '{' . $key . '}';
-            if (str_contains($path, $placeholder)) {
-                $path = str_replace($placeholder, (string)$val, $path);
+            // Try both optional {key?} and required {key} placeholders
+            $optionalPlaceholder = '{' . $key . '?}';
+            $requiredPlaceholder = '{' . $key . '}';
+
+            if (str_contains($path, $optionalPlaceholder)) {
+                $path = str_replace($optionalPlaceholder, (string)$val, $path);
+            } elseif (str_contains($path, $requiredPlaceholder)) {
+                $path = str_replace($requiredPlaceholder, (string)$val, $path);
             } else {
                 $queryParams[$key] = $val;
             }
         }
+
+        // Remove any remaining unfilled optional placeholders (e.g. /{id?} with no value)
+        $path = preg_replace('#/\{[a-zA-Z0-9_]+\?\}#', '', $path);
 
         if (!empty($queryParams)) {
             $path .= (str_contains($path, '?') ? '&' : '?') . http_build_query($queryParams);
