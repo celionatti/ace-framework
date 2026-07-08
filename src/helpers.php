@@ -98,9 +98,9 @@ if (!function_exists('route')) {
             $requiredPlaceholder = '{' . $key . '}';
 
             if (str_contains($path, $optionalPlaceholder)) {
-                $path = str_replace($optionalPlaceholder, (string)$val, $path);
+                $path = str_replace($optionalPlaceholder, (string) $val, $path);
             } elseif (str_contains($path, $requiredPlaceholder)) {
-                $path = str_replace($requiredPlaceholder, (string)$val, $path);
+                $path = str_replace($requiredPlaceholder, (string) $val, $path);
             } else {
                 $queryParams[$key] = $val;
             }
@@ -454,19 +454,19 @@ if (!function_exists('back')) {
     function back(string $fallback = '/', int $statusCode = 302, array $flashData = []): void
     {
         $referer = $_SERVER['HTTP_REFERER'] ?? $fallback;
-        
+
         // Prevent open redirect vulnerabilities: Ensure referrer is internal
         $appUrl = env('APP_URL', '');
         if (!empty($appUrl)) {
             $host = parse_url($appUrl, PHP_URL_HOST);
             $refererHost = parse_url($referer, PHP_URL_HOST);
-            
+
             // If the referer points to an external host, fallback to safe internal route
             if ($refererHost && $refererHost !== $host) {
                 $referer = $fallback;
             }
         }
-        
+
         redirect($referer, $statusCode, $flashData);
     }
 }
@@ -525,6 +525,46 @@ if (!function_exists('old')) {
         return $default;
     }
 }
+
+if (!function_exists('setting')) {
+    /**
+     * Get a setting from config/settings.json.
+     */
+    function setting(string $key, mixed $default = null): mixed
+    {
+        $settingsFile = Application::$ROOT_DIR . '/config/settings.json';
+        if (!file_exists($settingsFile)) {
+            return $default;
+        }
+        $content = @file_get_contents($settingsFile);
+        $data = json_decode($content, true) ?: [];
+        return $data[$key] ?? $default;
+    }
+}
+
+if (!function_exists('format_price')) {
+    /**
+     * Format a price according to active currency settings.
+     */
+    function format_price(float|int $amount): string
+    {
+        $currency = setting('currency', 'NGN'); // Naira is the default
+        $exchangeRate = (float) setting('exchange_rate', 1500.00); // Manually set exchange rate
+
+        if ($currency === 'USD') {
+            return '$' . number_format($amount, 2);
+        } elseif ($currency === 'NGN') {
+            return '₦' . number_format($amount, 2);
+        } elseif ($currency === 'both') {
+            // Base amount is in NGN, convert to USD for display
+            $usdAmount = $amount / $exchangeRate;
+            return '₦' . number_format($amount, 2) . ' ($' . number_format($usdAmount, 2) . ')';
+        }
+
+        return '₦' . number_format($amount, 2);
+    }
+}
+
 
 
 
