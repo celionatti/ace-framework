@@ -158,7 +158,21 @@ if (!function_exists('hasRole')) {
     function hasRole(string $slug): bool
     {
         $user = Application::$app->user;
-        return $user && $user->hasRole($slug);
+        if (! $user) {
+            return false;
+        }
+
+        // Prefer user->hasRole if available
+        if (method_exists($user, 'hasRole')) {
+            return $user->hasRole($slug);
+        }
+
+        // Fallback: check roles property (array of slugs) if present
+        if (property_exists($user, 'roles') && is_array($user->roles)) {
+            return in_array($slug, $user->roles, true);
+        }
+
+        return false;
     }
 }
 
@@ -171,7 +185,20 @@ if (!function_exists('hasPermission')) {
     function hasPermission(string $slug): bool
     {
         $user = Application::$app->user;
-        return $user && $user->hasPermission($slug);
+        if (! $user) {
+            return false;
+        }
+
+        if (method_exists($user, 'hasPermission')) {
+            return $user->hasPermission($slug);
+        }
+
+        // Fallback: check permissions property (array of slugs) if present
+        if (property_exists($user, 'permissions') && is_array($user->permissions)) {
+            return in_array($slug, $user->permissions, true);
+        }
+
+        return false;
     }
 }
 
