@@ -228,6 +228,81 @@ class View
     }
 
     /**
+     * Render toast notifications for session flash messages.
+     * Self-contained: includes its own CSS and JS inline.
+     * Supports: success, error, warning, info flash keys.
+     */
+    public static function renderToasts(): string
+    {
+        $session = Application::$app->session;
+        $flashKeys = [
+            'success' => '✅',
+            'error'   => '❌',
+            'warning' => '⚠️',
+            'info'    => 'ℹ️',
+        ];
+
+        // Check if any toast messages exist
+        $hasToasts = false;
+        foreach ($flashKeys as $key => $emoji) {
+            if ($session->getFlash($key)) {
+                $hasToasts = true;
+                break;
+            }
+        }
+
+        if (!$hasToasts) {
+            return '';
+        }
+
+        // Build toast HTML
+        $toastItems = '';
+        foreach ($flashKeys as $key => $emoji) {
+            $message = $session->getFlash($key);
+            if ($message) {
+                $safeMessage = htmlspecialchars((string) $message);
+                $title = ucfirst($key);
+                $toastItems .= <<<HTML
+                <div class="ace-toast ace-toast-{$key}" onclick="this.classList.add('ace-toast-fade-out'); setTimeout(() => this.remove(), 300)">
+                    <div class="ace-toast-icon">{$emoji}</div>
+                    <div class="ace-toast-content">
+                        <div class="ace-toast-title">{$title}</div>
+                        <div class="ace-toast-message">{$safeMessage}</div>
+                    </div>
+                    <button class="ace-toast-close" onclick="event.stopPropagation(); let p=this.parentElement; p.classList.add('ace-toast-fade-out'); setTimeout(()=>p.remove(),300)">&times;</button>
+                </div>
+HTML;
+            }
+        }
+
+        return <<<HTML
+        <style>
+            .ace-toast-container{position:fixed;top:2rem;right:2rem;z-index:9999;display:flex;flex-direction:column;gap:.75rem;max-width:400px;width:calc(100vw - 4rem);pointer-events:none;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+            .ace-toast{pointer-events:auto;background:rgba(18,24,36,.85);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.08);border-radius:1rem;padding:1rem 1.25rem;display:flex;align-items:center;gap:1rem;box-shadow:0 10px 25px -5px rgba(0,0,0,.3),0 8px 10px -6px rgba(0,0,0,.3);cursor:pointer;position:relative;overflow:hidden;color:#f1f5f9;animation:ace-toast-in .35s cubic-bezier(.16,1,.3,1) forwards;transition:transform .2s ease,opacity .2s ease,box-shadow .2s ease}
+            .ace-toast:hover{transform:translateY(-2px);box-shadow:0 20px 25px -5px rgba(0,0,0,.4),0 10px 10px -5px rgba(0,0,0,.4);border-color:rgba(255,255,255,.15)}
+            .ace-toast-success{border-left:4px solid #10b981}.ace-toast-error{border-left:4px solid #ef4444}.ace-toast-warning{border-left:4px solid #f59e0b}.ace-toast-info{border-left:4px solid #6366f1}
+            .ace-toast-icon{font-size:1.5rem;flex-shrink:0}.ace-toast-content{flex-grow:1}
+            .ace-toast-title{font-weight:600;font-size:.95rem;margin-bottom:.15rem;color:#fff;text-align:left}
+            .ace-toast-message{font-size:.875rem;color:#94a3b8;line-height:1.4;text-align:left}
+            .ace-toast-close{background:none;border:none;color:#64748b;font-size:1.25rem;cursor:pointer;padding:.25rem;line-height:1;transition:color .2s ease}.ace-toast-close:hover{color:#fff}
+            .ace-toast::after{content:"";position:absolute;bottom:0;left:0;height:3px;width:100%;transform-origin:left;animation:ace-toast-progress 5s linear forwards}
+            .ace-toast-success::after{background:#10b981}.ace-toast-error::after{background:#ef4444}.ace-toast-warning::after{background:#f59e0b}.ace-toast-info::after{background:#6366f1}
+            @keyframes ace-toast-in{from{opacity:0;transform:translateX(100px)}to{opacity:1;transform:translateX(0)}}
+            .ace-toast-fade-out{animation:ace-toast-out .3s cubic-bezier(.16,1,.3,1) forwards!important}
+            @keyframes ace-toast-out{from{opacity:1;transform:scale(1) translateY(0)}to{opacity:0;transform:scale(.9) translateY(-10px)}}
+            @keyframes ace-toast-progress{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+            @media(max-width:640px){.ace-toast-container{top:1rem;right:1rem;width:calc(100vw - 2rem)}}
+        </style>
+        <div class="ace-toast-container" id="ace-toast-container">
+            {$toastItems}
+        </div>
+        <script>
+            document.addEventListener("DOMContentLoaded",function(){document.querySelectorAll(".ace-toast").forEach(function(t){setTimeout(function(){if(t&&t.parentNode){t.classList.add("ace-toast-fade-out");setTimeout(function(){t.remove()},300)}},5000)})});
+        </script>
+HTML;
+    }
+
+    /**
      * Compile template file if modified, returning path to cached compiled script
      */
     private function compile(string $filePath): string
@@ -365,6 +440,9 @@ class View
             $content
         );
         $content = str_replace('@enderror', '<?php endif; ?>', $content);
+
+        // 9g. Compiling Toasts tag
+        $content = str_replace('@toasts', '<?php echo \Ace\View::renderToasts(); ?>', $content);
 
         // 10. Compiling Includes (balanced parens regex to support nested expressions in params)
         $content = preg_replace_callback(

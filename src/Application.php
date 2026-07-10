@@ -58,6 +58,19 @@ class Application
         // Error handling registration
         $this->registerErrorHandlers();
 
+        // Load event listener registrations
+        $eventsFile = self::$ROOT_DIR . '/config/events.php';
+        if (file_exists($eventsFile)) {
+            $events = require $eventsFile;
+            if (is_array($events)) {
+                foreach ($events as $event => $listeners) {
+                    foreach ((array)$listeners as $listener) {
+                        Event::listen($event, $listener);
+                    }
+                }
+            }
+        }
+
         // Resolve logged in user from session or remember-me cookie if exists
         $userClass = $this->config['userClass'] ?? null;
         if ($userClass) {
@@ -203,6 +216,9 @@ class Application
         $primaryKey = $user->primaryKey();
         $value = $user->{$primaryKey};
         $this->session->set('user', $value);
+
+        // Regenerate CSRF token after login to prevent pre-login CSRF fixation
+        $this->session->regenerateCsrfToken();
 
         if ($remember) {
             $this->createRememberMeToken($value);

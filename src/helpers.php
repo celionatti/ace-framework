@@ -528,44 +528,85 @@ if (!function_exists('old')) {
 
 if (!function_exists('setting')) {
     /**
-     * Get a setting from config/settings.json.
+     * Get a setting from config/settings.json (with request-level caching and dot-notation support).
      */
     function setting(string $key, mixed $default = null): mixed
     {
-        $settingsFile = Application::$ROOT_DIR . '/config/settings.json';
-        if (!file_exists($settingsFile)) {
-            return $default;
+        static $settings = null;
+
+        if ($settings === null) {
+            $settingsFile = Application::$ROOT_DIR . '/config/settings.json';
+            if (file_exists($settingsFile)) {
+                $content = @file_get_contents($settingsFile);
+                $settings = json_decode($content, true);
+                if (!is_array($settings)) {
+                    $settings = [];
+                }
+            } else {
+                $settings = [];
+            }
         }
-        $content = @file_get_contents($settingsFile);
-        $data = json_decode($content, true) ?: [];
-        return $data[$key] ?? $default;
+
+        // Support dot-notation access (e.g. setting('payment.provider'))
+        $data = $settings;
+        foreach (explode('.', $key) as $segment) {
+            if (is_array($data) && array_key_exists($segment, $data)) {
+                $data = $data[$segment];
+            } else {
+                return $default;
+            }
+        }
+
+        return $data;
     }
 }
 
 if (!function_exists('format_price')) {
     /**
      * Format a price according to active currency settings.
+     * Prevents division-by-zero errors, supports multiple currencies, and runs optimally.
      */
-    function format_price(float|int $amount): string
+    function format_price(float|int $amount, ?string $currencyCode = null): string
     {
-        $currency = setting('currency', 'NGN'); // Naira is the default
-        $exchangeRate = (float) setting('exchange_rate', 1500.00); // Manually set exchange rate
+        $currency = strtoupper($currencyCode ?: setting('currency', 'NGN'));
+        $exchangeRate = (float) setting('exchange_rate', 1500.00);
 
-        if ($currency === 'USD') {
-            return '$' . number_format($amount, 2);
-        } elseif ($currency === 'NGN') {
-            return '₦' . number_format($amount, 2);
-        } elseif ($currency === 'both') {
-            // Base amount is in NGN, convert to USD for display
-            $usdAmount = $amount / $exchangeRate;
-            return '₦' . number_format($amount, 2) . ' ($' . number_format($usdAmount, 2) . ')';
+        // Prevent division-by-zero errors in production
+        if ($exchangeRate <= 0) {
+            $exchangeRate = 1.0;
         }
 
-        return '₦' . number_format($amount, 2);
+        switch ($currency) {
+            case 'USD':
+                return '$' . number_format($amount, 2);
+            case 'EUR':
+                return '€' . number_format($amount, 2);
+            case 'GBP':
+                return '£' . number_format($amount, 2);
+            case 'NGN':
+                return '₦' . number_format($amount, 2);
+            case 'BOTH':
+                // Base amount is assumed to be in NGN, convert to USD for secondary display
+                $usdAmount = $amount / $exchangeRate;
+                return '₦' . number_format($amount, 2) . ' ($' . number_format($usdAmount, 2) . ')';
+            default:
+                // Try dynamic symbol from configuration or default to currency code prefix
+                $symbol = setting("currency_symbols.{$currency}", $currency . ' ');
+                return $symbol . number_format($amount, 2);
+        }
     }
 }
 
-
-
-
-
+if (!function_exists('event')) {
+    /**
+     * Dispatch an event to all registered listeners.
+     *
+     * @param string $event The event name
+     * @param mixed ...$payload Data passed to listeners
+     * @return array Listener responses
+     */
+    function event(string $event, mixed ...$payload): array
+    {
+        return \Ace\Event::dispatch($event, ...$payload);
+    }
+}
