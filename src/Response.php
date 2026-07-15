@@ -40,8 +40,13 @@ class Response
 
         // If it's an absolute URL, redirect directly
         if (str_starts_with($url, 'http://') || str_starts_with($url, 'https://')) {
-            header('Location: ' . $url);
-            exit;
+            if (!headers_sent()) {
+                header('Location: ' . $url);
+            }
+            if (php_sapi_name() !== 'cli') {
+                exit;
+            }
+            return;
         }
 
         // Prepend base folder for local subdirectory installations (e.g. /mvc/public)
@@ -49,14 +54,18 @@ class Response
             $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
             $baseDir = dirname($scriptName);
             $baseDir = str_replace('\\', '/', $baseDir);
-            
+
             if ($baseDir !== '/' && !empty($baseDir)) {
                 $url = rtrim($baseDir, '/') . $url;
             }
         }
 
-        header('Location: ' . $url);
-        exit;
+        if (!headers_sent()) {
+            header('Location: ' . $url);
+        }
+        if (php_sapi_name() !== 'cli') {
+            exit;
+        }
     }
 
     /**
@@ -65,9 +74,12 @@ class Response
     public function json(array $data, int $statusCode = 200): void
     {
         $this->setStatusCode($statusCode);
-        header('Content-Type: application/json');
+        if (!headers_sent()) {
+            header('Content-Type: application/json');
+        }
         echo json_encode($data);
-        exit;
+        if (php_sapi_name() !== 'cli') {
+            exit;
+        }
     }
 }
-

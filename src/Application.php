@@ -26,6 +26,10 @@ class Application
         self::$app = $this;
         $this->config = $config;
 
+        // Set system default timezone
+        $timezone = $this->config['timezone'] ?? 'UTC';
+        date_default_timezone_set($timezone);
+
         // Initialize the Dependency Injection Container
         $this->container = new Container();
 

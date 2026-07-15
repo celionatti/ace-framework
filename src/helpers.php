@@ -721,3 +721,36 @@ if (!function_exists('event')) {
         return \Ace\Event::dispatch($event, ...$payload);
     }
 }
+
+if (!function_exists('slugify')) {
+    /**
+     * Generate a URL-friendly slug from a string.
+     * Transliterates non-ASCII characters, removes special chars, and handles custom delimiters.
+     *
+     * @param string $text The input string to slugify
+     * @param string $divider The word divider (default is '-')
+     * @return string The generated slug
+     */
+    function slugify(string $text, string $divider = '-'): string
+    {
+        // Transliterate non-ASCII characters to ASCII (e.g. "München" -> "Munchen")
+        if (class_exists('Transliterator') || function_exists('transliterator_transliterate')) {
+            $text = transliterator_transliterate('Any-Latin; Latin-ASCII; Lower()', $text);
+        } else {
+            // Fallback transliteration via iconv if Transliterator is unavailable
+            $text = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $text);
+        }
+
+        // Lowercase the text (in case transliterator was not used/installed or iconv was used)
+        $text = strtolower($text);
+
+        // Replace non-alphanumeric characters with the divider
+        $text = preg_replace('/[^a-z0-9]+/', $divider, $text);
+
+        // Remove duplicate dividers
+        $text = preg_replace('/' . preg_quote($divider, '/') . '+/', $divider, $text);
+
+        // Trim leading and trailing dividers
+        return trim($text, $divider);
+    }
+}
