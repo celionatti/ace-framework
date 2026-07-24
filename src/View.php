@@ -47,8 +47,8 @@ class View
         // Compile view template to cached PHP file
         $compiledViewFile = $this->compile($viewFile);
 
-        // Extract params to local variables
-        extract($params);
+        // Extract params to local variables (wrapped so both array and object access work)
+        extract($this->wrapParams($params));
 
         // Buffer and execute compiled view
         ob_start();
@@ -137,10 +137,22 @@ class View
      */
     private function renderSubView(string $compiledFile, array $params): string
     {
-        extract($params);
+        extract($this->wrapParams($params));
         ob_start();
         include $compiledFile;
         return ob_get_clean();
+    }
+
+    /**
+     * Wrap parameter values in ViewData so arrays and objects can be accessed using both -> and []
+     */
+    private function wrapParams(array $params): array
+    {
+        $wrapped = [];
+        foreach ($params as $key => $value) {
+            $wrapped[$key] = ViewData::wrap($value);
+        }
+        return $wrapped;
     }
 
     /**

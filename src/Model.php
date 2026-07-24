@@ -4,7 +4,7 @@ namespace Ace;
 
 use Ace\Exceptions\ModelNotFoundException;
 
-abstract class Model
+abstract class Model implements \ArrayAccess, \IteratorAggregate, \JsonSerializable
 {
     public const RULE_REQUIRED = 'required';
     public const RULE_EMAIL = 'email';
@@ -90,6 +90,41 @@ abstract class Model
     public function __unset(string $name): void
     {
         unset($this->attributes[$name]);
+    }
+
+    // =========================================================================
+    // ArrayAccess, Countable, IteratorAggregate & JsonSerializable Implementation
+    // Allows $model['property'] syntax alongside $model->property
+    // =========================================================================
+
+    public function offsetExists(mixed $offset): bool
+    {
+        return $this->__isset((string) $offset) || isset($this->{(string) $offset});
+    }
+
+    public function offsetGet(mixed $offset): mixed
+    {
+        return $this->__get((string) $offset);
+    }
+
+    public function offsetSet(mixed $offset, mixed $value): void
+    {
+        $this->__set((string) $offset, $value);
+    }
+
+    public function offsetUnset(mixed $offset): void
+    {
+        $this->__unset((string) $offset);
+    }
+
+    public function getIterator(): \ArrayIterator
+    {
+        return new \ArrayIterator($this->attributes);
+    }
+
+    public function jsonSerialize(): mixed
+    {
+        return method_exists($this, 'toArray') ? $this->toArray() : $this->attributes;
     }
 
     // =========================================================================
