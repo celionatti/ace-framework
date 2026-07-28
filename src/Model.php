@@ -450,8 +450,17 @@ abstract class Model implements \ArrayAccess, \IteratorAggregate, \JsonSerializa
         }
 
         $pkValue = $this->{$primaryKey} ?? null;
+        $isInsert = empty($pkValue);
 
-        if (empty($pkValue)) {
+        if (!$isInsert) {
+            $stmtExists = $db->prepare("SELECT COUNT(*) FROM `$tableName` WHERE `$primaryKey` = :pk_val");
+            $stmtExists->execute([':pk_val' => $pkValue]);
+            if ((int)$stmtExists->fetchColumn() === 0) {
+                $isInsert = true;
+            }
+        }
+
+        if ($isInsert) {
             // INSERT record
             $fields = array_keys($saveData);
             $placeholders = array_map(fn($f) => ":$f", $fields);
@@ -467,7 +476,10 @@ abstract class Model implements \ArrayAccess, \IteratorAggregate, \JsonSerializa
             }
 
             if ($statement->execute()) {
-                $this->{$primaryKey} = $db->pdo->lastInsertId();
+                $lastId = $db->pdo->lastInsertId();
+                if (!empty($lastId) && $lastId != 0) {
+                    $this->{$primaryKey} = $lastId;
+                }
                 return true;
             }
         } else {
