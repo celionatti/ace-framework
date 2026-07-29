@@ -41,6 +41,33 @@ if (!function_exists('config')) {
     }
 }
 
+if (!function_exists('get_setting')) {
+    /**
+     * Alias for setting() - Get a setting from config/settings.json
+     */
+    function get_setting(string $key, mixed $default = null): mixed
+    {
+        return setting($key, $default);
+    }
+}
+
+if (!function_exists('get_currency_symbol')) {
+    /**
+     * Get currency symbol based on active currency setting
+     */
+    function get_currency_symbol(?string $currencyCode = null): string
+    {
+        $currency = strtoupper($currencyCode ?: setting('currency', 'NGN'));
+        return match ($currency) {
+            'USD' => '$',
+            'EUR' => '€',
+            'GBP' => '£',
+            'NGN', 'BOTH' => '₦',
+            default => setting("currency_symbols.{$currency}", $currency . ' '),
+        };
+    }
+}
+
 if (!function_exists('view')) {
     /**
      * Render a view template.
@@ -754,3 +781,53 @@ if (!function_exists('slugify')) {
         return trim($text, $divider);
     }
 }
+
+if (!function_exists('generate_event_slug')) {
+    /**
+     * Generate a secure, detailed, non-sequential slug for an event.
+     * Combines the URL-friendly event name with an 8-character unique hash.
+     * E.g., "Summer Beats Festival" -> "summer-beats-festival-bf786668"
+     */
+    function generate_event_slug(string $name, int|string|null $id = null): string
+    {
+        $base = slugify($name);
+        if (empty($base)) {
+            $base = 'event';
+        }
+        $hash = substr(md5(($id ? $id : '') . '_' . $name . '_' . microtime(true) . '_' . bin2hex(random_bytes(4))), 0, 8);
+        return $base . '-' . $hash;
+    }
+}
+
+if (!function_exists('event_url')) {
+    /**
+     * Generate canonical, secure URL for an event.
+     * Handles both arrays and Model objects (extracting attributes/magic properties).
+     */
+    function event_url(array|object|null $event): string
+    {
+        if (!$event) {
+            return route('/');
+        }
+
+        $slug = '';
+        $id = '';
+
+        if (is_object($event)) {
+            $slug = $event->slug ?? ($event->custom_url ?? '');
+            $id = $event->id ?? '';
+        } else {
+            $slug = !empty($event['slug']) ? $event['slug'] : (!empty($event['custom_url']) ? $event['custom_url'] : '');
+            $id = $event['id'] ?? '';
+        }
+
+        $target = !empty($slug) ? $slug : $id;
+
+        if (empty($target)) {
+            return route('/');
+        }
+
+        return route('event/{id}', ['id' => $target]);
+    }
+}
+
