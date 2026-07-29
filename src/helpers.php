@@ -831,3 +831,57 @@ if (!function_exists('event_url')) {
     }
 }
 
+if (!function_exists('site_setting')) {
+    /**
+     * Read a site setting from config/settings.json.
+     * Cached per-request to avoid repeated file reads.
+     *
+     * @param string|null $key   Setting key, or null to get all settings
+     * @param mixed       $default Fallback value if key is missing
+     * @return mixed
+     */
+    function site_setting(?string $key = null, mixed $default = ''): mixed
+    {
+        static $cache = null;
+
+        if ($cache === null) {
+            $defaults = [
+                'site_title' => 'Ace PHP Framework',
+                'site_description' => 'A modern PHP framework for building web applications with speed and elegance.',
+                'site_logo' => '',
+                'site_favicon' => '',
+                'support_email' => 'support@acephp.com',
+                'maintenance_mode' => 'no',
+                'default_gateway' => 'paystack',
+                'platform_fee' => '2.5',
+                'extra_charge' => '100.00',
+                'currency' => 'NGN',
+                'exchange_rate' => '1500.00',
+                'timezone' => 'Africa/Lagos',
+                'social_twitter' => '',
+                'social_instagram' => '',
+                'social_facebook' => '',
+                'social_linkedin' => '',
+                'social_youtube' => '',
+                'social_tiktok' => '',
+                'meta_description' => '',
+                'meta_keywords' => '',
+            ];
+
+            $settingsFile = Application::$ROOT_DIR . '/config/settings.json';
+
+            if (file_exists($settingsFile)) {
+                $data = json_decode(file_get_contents($settingsFile), true) ?: [];
+                $cache = array_merge($defaults, $data);
+            } else {
+                $cache = $defaults;
+            }
+        }
+
+        if ($key === null) {
+            return $cache;
+        }
+
+        return $cache[$key] ?? $default;
+    }
+}
