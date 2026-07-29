@@ -144,6 +144,57 @@ class Request
     }
 
     /**
+     * Check if a parameter exists in the request body
+     */
+    public function has(string $key): bool
+    {
+        $body = $this->getBody();
+        return isset($body[$key]) && $body[$key] !== '';
+    }
+
+    /**
+     * Get a parameter as a trimmed string
+     */
+    public function getString(string $key, string $default = ''): string
+    {
+        $val = $this->get($key, $default);
+        if (is_array($val)) {
+            return $default;
+        }
+        return trim((string)$val);
+    }
+
+    /**
+     * Get a parameter as an integer
+     */
+    public function getInt(string $key, int $default = 0): int
+    {
+        $val = $this->get($key, $default);
+        if (!is_numeric($val)) {
+            return $default;
+        }
+        return (int)$val;
+    }
+
+    /**
+     * Get a parameter as a boolean
+     */
+    public function getBool(string $key, bool $default = false): bool
+    {
+        $val = $this->get($key, $default);
+        return filter_var($val, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) ?? $default;
+    }
+
+    /**
+     * Get a parameter as an array
+     */
+    public function getArray(string $key, array $default = []): array
+    {
+        $val = $this->get($key, $default);
+        return is_array($val) ? $val : $default;
+    }
+
+    /**
      * Check if the current request path matches a pattern (supports wildcards e.g. 'admin/*')
      */
     // public function is(string $pattern): bool
