@@ -52,8 +52,15 @@ class View
 
         // Buffer and execute compiled view
         ob_start();
-        include $compiledViewFile;
-        $viewContent = ob_get_clean();
+        try {
+            include $compiledViewFile;
+            $viewContent = ob_get_clean();
+        } catch (\Throwable $e) {
+            if (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+            throw $e;
+        }
 
         // If layout was set via `@extends('layout')` directive inside the view file
         if ($this->layout) {
@@ -72,8 +79,15 @@ class View
 
             // Buffer and render layout
             ob_start();
-            include $compiledLayoutFile;
-            $layoutContent = ob_get_clean();
+            try {
+                include $compiledLayoutFile;
+                $layoutContent = ob_get_clean();
+            } catch (\Throwable $e) {
+                if (ob_get_level() > 0) {
+                    ob_end_clean();
+                }
+                throw $e;
+            }
 
             return $layoutContent;
         }
@@ -139,8 +153,15 @@ class View
     {
         extract($this->wrapParams($params));
         ob_start();
-        include $compiledFile;
-        return ob_get_clean();
+        try {
+            include $compiledFile;
+            return ob_get_clean();
+        } catch (\Throwable $e) {
+            if (ob_get_level() > 0) {
+                ob_end_clean();
+            }
+            throw $e;
+        }
     }
 
     /**
