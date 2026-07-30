@@ -104,6 +104,10 @@ class Guard
             return '';
         }
 
+        if (is_array($value)) {
+            return implode(', ', array_map([static::class, 'output'], $value));
+        }
+
         return htmlspecialchars((string)$value, ENT_QUOTES, 'UTF-8');
     }
 
