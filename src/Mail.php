@@ -56,6 +56,8 @@ class Mail
             $body = Application::$app->view->render($view, $params);
 
             // Content
+            $mail->CharSet  = PHPMailer::CHARSET_UTF8;
+            $mail->Encoding = PHPMailer::ENCODING_BASE64;
             $mail->isHTML(true);
             $mail->Subject = $subject;
             $mail->Body    = $body;
