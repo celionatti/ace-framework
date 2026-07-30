@@ -83,6 +83,29 @@ class PaystackService
     }
 
     /**
+     * Initiate a refund for a transaction via Paystack Refund API
+     */
+    public function refundTransaction(string $reference, ?float $amount = null, string $merchantNote = 'Host refund request'): array
+    {
+        $url = $this->baseUrl . "/refund";
+        $fields = [
+            'transaction' => $reference,
+            'merchant_note' => $merchantNote
+        ];
+
+        if ($amount !== null && $amount > 0) {
+            $fields['amount'] = (int)round($amount * 100);
+        }
+
+        $response = $this->makeRequest('POST', $url, $fields);
+        if (isset($response['status']) && $response['status'] === true) {
+            return $response['data'];
+        }
+
+        throw new Exception("Paystack Refund Error: " . ($response['message'] ?? 'Unknown Paystack error'), 400);
+    }
+
+    /**
      * Validate a Paystack Webhook Signature to ensure request authenticity
      */
     public function validateWebhook(string $payload, string $signatureHeader): bool
@@ -323,10 +346,18 @@ class PaystackService
         
         curl_setopt($ch, CURLOPT_URL, $url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+        curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
+        curl_setopt($ch, CURLOPT_SSLVERSION, CURL_SSLVERSION_TLSv1_2);
+
+        // Environment-aware SSL verification for local XAMPP/Windows compatibility
+        $verifySsl = (($_ENV['APP_ENV'] ?? 'development') === 'production');
+        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $verifySsl);
+        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $verifySsl ? 2 : 0);
         
         $headers = [
-            "Authorization: Bearer " . $this->secretKey,
+            "Authorization: Bearer " . trim($this->secretKey),
             "Cache-Control: no-cache",
             "Content-Type: application/json"
         ];
